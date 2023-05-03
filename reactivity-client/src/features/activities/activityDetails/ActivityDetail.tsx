@@ -1,14 +1,15 @@
 import React from 'react';
 import { Button, Card, Image } from 'semantic-ui-react';
-import { Activity } from '../../../app/models/activity';
+import { useStore } from '../../../stores/store';
+import { observer } from 'mobx-react-lite';
+import LoadingComponent from '../../../app/layout/LoadingComponent';
 
 
-interface Props{
-  activity:Activity;
-  cancelSelectedActivity: ()=> void;
-  openForm:(id:string) => void;
-}
-export default function ActivityDetail({activity,cancelSelectedActivity,openForm}:Props){
+
+export default observer(function ActivityDetail(){
+ const {activityStore} = useStore();
+ const {selectedActivity:activity,openForm,cancelSelectedActivity} = activityStore;
+  if(!activity) return <LoadingComponent/>
   return(
     <>
     <Card fluid>
@@ -29,4 +30,4 @@ export default function ActivityDetail({activity,cancelSelectedActivity,openForm
     </Card>
     </>
   )
-}
+})

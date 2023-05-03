@@ -1,14 +1,13 @@
 import React, { SyntheticEvent, useState } from "react";
 import { Button, Item, Label, Segment } from "semantic-ui-react";
 import { Activity } from "../../app/models/activity";
-interface Props {
-  activities: Activity[];
-  handleSelectActivity : (id:string)=> void;
-  deleteActivity:(id:string)=>void;
-  submitting:boolean;
-}
+import { useStore } from "../../stores/store";
+import { observer } from "mobx-react-lite";
 
-export default function ActivityList({ activities,handleSelectActivity,deleteActivity ,submitting}: Props) {
+
+export default observer(function ActivityList() {
+  const {activityStore} = useStore();
+  const {setSelectedActivity:handleSelectActivity,activitySortedByDate,deleteActivity,loading}=activityStore;
   const [target,setTarget]=useState('');
 
   function handleDeleteEvent(e:SyntheticEvent<HTMLButtonElement>,id:string){
@@ -21,7 +20,7 @@ export default function ActivityList({ activities,handleSelectActivity,deleteAct
     <>
       <Segment>
         <Item.Group divided>
-          {activities.map((activity) => {
+          {activitySortedByDate.map((activity) => {
             return <Item key={activity.id}>
                 <Item.Content>
                     <Item.Header as='a'>
@@ -36,7 +35,7 @@ export default function ActivityList({ activities,handleSelectActivity,deleteAct
                     </Item.Description>
                     <Item.Extra>
                         <Button onClick={()=> handleSelectActivity(activity.id)} floated='right' content="View" color="blue"></Button>
-                        <Button name={activity.id}  loading={submitting && target === activity.id} onClick={(e)=> handleDeleteEvent(e,activity.id)} floated='right' content="Delete" color="red"></Button>
+                        <Button name={activity.id}  loading={loading && target === activity.id} onClick={(e)=> handleDeleteEvent(e,activity.id)} floated='right' content="Delete" color="red"></Button>
                         <Label basic content={activity.category.charAt(0).toUpperCase()+activity.category.slice(1)}/>
                     </Item.Extra>
                 </Item.Content>
@@ -46,4 +45,4 @@ export default function ActivityList({ activities,handleSelectActivity,deleteAct
       </Segment>
     </>
   );
-}
+})
