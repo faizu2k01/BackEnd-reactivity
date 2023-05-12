@@ -9,7 +9,7 @@ export default class ActivityStore{
     editMode:boolean=false;
     loading:boolean=false;
     submitting:boolean=false;
-    loadingInitial:boolean=true;
+    loadingInitial:boolean=false;
 
     constructor(){
        makeAutoObservable(this);
@@ -18,26 +18,68 @@ export default class ActivityStore{
     get activitySortedByDate():Array<Activity>{
         return Array.from(this.activitiesRegistry.values()).sort((b,a)=>Date.parse(b.date)-Date.parse(a.date));
     }
+
+    get groupedActivities(){
+        return Object.entries(
+            this.activitySortedByDate.reduce((activites,activity) => {
+                const date = activity.date;
+                activites[date] = activites[date] ? [...activites[date],activity] : [activity];
+                return activites
+            },{} as {[Key:string]:Activity[]})
+        )
+    }
+
     //action of the mobx
     loadingActivity = async ()=>{
+       this.setLoadingInitial(true);
+       if(!this.activitiesRegistry || this.activitiesRegistry.size > 0){
+        this.setLoadingInitial(false); 
+        return;
+       } 
         try{
             const activities  = await agent.Activities.list();
              activities.forEach(x => {
-               x.date =  x.date.split('T')[0]
-                this.activitiesRegistry.set(x.id,x);                              
+             x =  this.setActivityDate(x);    
+             this.activitiesRegistry.set(x.id,x);                      
              });
              runInAction(()=>{
-                this.loadingInitial = false;
+                this.setLoadingInitial(false);
              })
-             
-             
         }catch(error){
             console.log(error);
             runInAction(()=>{
-                this.loadingInitial = false;
+                this.setLoadingInitial(false);
 
+            }) 
+        }
+    }
+
+
+    loadingActivityDetail=async(id:string)=>{
+        this.setLoadingInitial(true);
+        var activity = this.getActivityFormMemory(id);
+        if(activity){
+            runInAction(()=>{
+                this.selectedActivity = activity;
+                this.setLoadingInitial(false);
             })
-            
+             return activity;
+        } 
+        else{
+            try{
+                this.setLoadingInitial(true);
+                 activity =  await agent.Activities.details(id);
+                runInAction(()=>{
+                    this.selectedActivity = this.setActivityDate(activity!);
+                    this.setLoadingInitial(false);
+                })       
+                
+                return activity;
+               
+            }catch(error){
+                console.log(error);
+                this.setLoadingInitial(false);
+            }
         }
     }
 
@@ -48,25 +90,21 @@ export default class ActivityStore{
     setSelectedActivity = (id:string)=>{
         this.selectedActivity = this.activitiesRegistry.get(id);
     }
-    
-    cancelSelectedActivity =()=>{
-        this.selectedActivity = undefined;
+
+    private setActivityDate(x:Activity){
+        x.date =  x.date.split('T')[0];
+        return x;  
     }
 
-    openForm = (id?:string)=>{
-        id ? this.setSelectedActivity(id) : this.cancelSelectedActivity();
-        this.editMode = true;
-        
+    private getActivityFormMemory(id: string){
+        return this.activitiesRegistry.get(id);
     }
-
-    cancelForm = ()=>{
-        this.editMode = false;
-    }
+   
 
     createActivity = async (activity:Activity)=>{
         this.loading = true;
         try{
-            activity.id = uuid();
+            //activity.id = uuid();
             await agent.Activities.create(activity);
             runInAction(()=>{
                 this.activitiesRegistry.set(activity.id,activity);
@@ -109,7 +147,7 @@ export default class ActivityStore{
             await agent.Activities.del(id);
             runInAction(()=>{
                 this.activitiesRegistry.delete(id);
-                if(this.selectedActivity?.id === id) this.cancelSelectedActivity();
+                this.selectedActivity = undefined;
                 this.editMode = false;
                 this.loading = false;
             })

@@ -1,41 +1,49 @@
-import React, { ChangeEvent, useState } from 'react'
+import React, { ChangeEvent, useEffect, useState } from 'react'
 import { Button, Form, Segment } from 'semantic-ui-react'
-import { Activity } from '../../../app/models/activity'
 import { useStore } from '../../../stores/store';
 import { observer } from 'mobx-react-lite';
-
-
-
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import LoadingComponent from '../../../app/layout/LoadingComponent';
+import {v4 as uuid} from 'uuid';
 
 export default observer(function ActivityForms() {
   const {activityStore} = useStore();
-  const {cancelForm:closeForm,selectedActivity,updateActivity,createActivity,loading} = activityStore;
- const initialActivity = selectedActivity ?? {
-  id: '',
-  title: '',
-  date: '',
-  description: '',
-  category: '',
-  city: '',
-  venue: ''
-  }
+  const {selectedActivity,updateActivity,createActivity,loading,loadingActivityDetail,loadingInitial} = activityStore;
+  const {id} = useParams();
+  const nevigate = useNavigate();
+  const [activity,setActivity] = useState({
+    id: '',
+    title: '',
+    date: '',
+    description: '',
+    category: '',
+    city: '',
+    venue: ''
+    });
 
-  const [activity,setActivity] = useState(initialActivity);
+  useEffect(()=>{
+   if(id) loadingActivityDetail(id).then(activity=> setActivity(activity!));
+  
+  },[id,loadingActivityDetail])
  
  
   function handleSubmit(){
-     activity.id ? updateActivity(activity) : createActivity(activity);
+    if(!activity.id){
+      activity.id = uuid();
+      createActivity(activity).then(()=>nevigate(`/activities/${activity.id}`));
+    }else{
+      updateActivity(activity).then(()=>nevigate(`/activities/${activity.id}`));
+    }
+     
  }
 
 function handleOnChange(event:ChangeEvent<HTMLInputElement | HTMLTextAreaElement>){
-
   const {name,value} = event.target;
   setActivity({...activity, [name]:value});
-
-
 }
  
  
+  if(loadingInitial) return <LoadingComponent content='Loading activity...'/>
  
   return (
     <>
@@ -48,7 +56,7 @@ function handleOnChange(event:ChangeEvent<HTMLInputElement | HTMLTextAreaElement
             <Form.Input placeholder='City' value={activity.city} name='city' onChange={handleOnChange}/>
             <Form.Input placeholder='Venue' value={activity.venue} name='venue' onChange={handleOnChange}/>
             <Button loading={loading} floated='right' positive type='submit' content="Submit"/>
-            <Button onClick={closeForm} floated='right'  type='button' content="Cancel"/>
+            <Button as={Link} to={`/activities/${activity.id}`} floated='right'  type='button' content="Cancel"/>
 
         </Form>
     </Segment>
