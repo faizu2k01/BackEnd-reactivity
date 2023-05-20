@@ -64,7 +64,7 @@ export default observer(function ActivityForms() {
       <Segment clearing>
         <Header sub content="Activity Details" color='teal' />
         <Formik validationSchema={validation} enableReinitialize initialValues={activity} onSubmit={values => handleFormSubmit(values)}>
-          {({ handleSubmit,isValid,isSubmitting,dirty, }) => (
+          {({ handleSubmit,isValid,isSubmitting,dirty}) => (
             <Form className='ui form' onSubmit={handleSubmit} autoComplete="off">
              
               <MyInput name='title' placeholder='Title'/>

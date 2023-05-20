@@ -52,9 +52,16 @@ namespace API.Controllers
         [ProducesResponseType((typeof(UserDto)),(int)HttpStatusCode.OK)]
         public async Task<ActionResult<UserDto>> RegisterUser(RegisterDto registerDto)
         {
-            if(await _userManger.Users.AnyAsync(x => x.UserName == registerDto.UserName || x.Email == registerDto.Email))
+            if(await _userManger.Users.AnyAsync(x => x.Email == registerDto.Email))
             {
-                return BadRequest("UserName or Email is already taken");
+                ModelState.AddModelError("Email", "Email taken");
+                return ValidationProblem();
+            }
+
+            if (await _userManger.Users.AnyAsync(x => x.UserName == registerDto.UserName))
+            {
+                ModelState.AddModelError("UserName", "User name taken");
+                return ValidationProblem();
             }
 
             var user = new AppUser
@@ -91,7 +98,7 @@ namespace API.Controllers
                 DisplayName = user.DisplayName,
                 UserName = user.UserName,
                 Image = null,
-                Token = _tokenGenerator.CreateToken(user)
+                Token =_tokenGenerator.CreateToken(user)
             };
         }
     }

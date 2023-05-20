@@ -3,6 +3,8 @@ import { Activity } from "../app/models/activity";
 import { toast } from "react-toastify";
 import { router } from "../app/router/routes";
 import { store } from "../stores/store";
+import { User, UserFormValues } from "../app/models/user";
+import { configure } from "mobx";
 
 
 const sleep = (delay:number)=>{
@@ -11,6 +13,11 @@ const sleep = (delay:number)=>{
     })
 }
 
+axios.interceptors.request.use(configure=>{
+    const token = store.commonStore.token;
+    if(token && configure.headers) configure.headers.Authorization = `Bearer ${token}`;
+    return configure; 
+})
 axios.interceptors.response.use(async resp =>{
         await sleep(2000);
         return resp;
@@ -21,6 +28,9 @@ axios.interceptors.response.use(async resp =>{
     switch (status){
         case 404:
             router.navigate('/not-found');
+            break;
+        case 401:
+            toast.error("Unothorizes");
             break;
         case 400:
             if(config.method==='get' && data.errors.hasOwnProperty('id')){
@@ -67,8 +77,15 @@ const Activities ={
     del:(id:string)=>requests.delete<void>(`/activities/${id}`)
 }
 
+const Account ={
+    currentUser:()=> requests.get<User>('/account'),
+    register:(user:UserFormValues) => requests.post<User>("/account/register",user),
+    login:(user:UserFormValues)=> requests.post<User>("/account/login",user)
+}
+
 const agent ={
-    Activities
+    Activities,
+    Account
 }
 
 
