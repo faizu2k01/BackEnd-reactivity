@@ -1,8 +1,12 @@
 import { makeAutoObservable, makeObservable, runInAction } from "mobx";
-import { Activity } from "../app/models/activity";
+import { Activity, ActivityFormValues } from "../app/models/activity";
 import agent from "../api/agent";
 import {v4 as uuid} from "uuid";
 import {format} from 'date-fns';
+import { store } from "./store";
+import { transpileModule } from "typescript";
+import { toast } from "react-toastify";
+import { Profile } from "../app/models/profile";
 
 export default class ActivityStore{
     activitiesRegistry = new Map<string,Activity>();
@@ -93,6 +97,12 @@ export default class ActivityStore{
     }
 
     private setActivityDate(x:Activity){
+        var user = store.userStore.user;
+        if(user){
+            x.isGoing = x.attendees?.some( a => a.userName === user?.userName);
+            x.isHost = x.hostUserName === user.userName;
+            x.host = x.attendees?.find(y=> y.userName === x.hostUserName);
+        }
         x.date =  new Date(x.date!);
         return x;  
     }
@@ -102,43 +112,38 @@ export default class ActivityStore{
     }
    
 
-    createActivity = async (activity:Activity)=>{
-        this.loading = true;
+    createActivity = async (activity:ActivityFormValues)=>{
+       const user = store.userStore.user;
+       const attendee = new Profile(user!);
         try{
-            //activity.id = uuid();
+            const newActivity = new Activity(activity);
+            newActivity.hostUserName = user!.userName;
+            newActivity.attendees = [attendee];
             await agent.Activities.create(activity);
+            this.setActivityDate(newActivity);
             runInAction(()=>{
-                this.activitiesRegistry.set(activity.id,activity);
-                this.editMode = false;
-                this.loading = false;
+                this.activitiesRegistry.set(activity.id!, newActivity as unknown as Activity);
+                this.selectedActivity = newActivity;
             })  
         }catch(error){
-            console.log(error);
-            runInAction(()=>{
-                this.editMode = false;
-                this.loading = false;
-            })  
+            console.log(error); 
         }
     }
 
 
-    updateActivity = async (activiy:Activity)=>{
-        this.loading = true;
+    updateActivity = async (activiy:ActivityFormValues)=>{
         try{
             await agent.Activities.update(activiy);
-       
         runInAction(()=>{
-            this.activitiesRegistry.set(activiy.id,activiy);
-            this.selectedActivity = activiy;
-            this.editMode = false;
-            this.loading = false;
+            if(activiy.id){
+                const updatedActivity = {...this.getActivityFormMemory(activiy.id),...activiy};
+                this.activitiesRegistry.set(activiy.id, updatedActivity as unknown as Activity);
+                this.selectedActivity = updatedActivity as unknown as Activity;
+            }
         })  
         }catch(error){
             console.log(error);
-            runInAction(()=>{
-                this.editMode = false;
-                this.loading = false;
-            })  
+            
         }
     }
 
@@ -157,6 +162,54 @@ export default class ActivityStore{
             runInAction(()=>{
                 this.editMode =false;
                 this.loading = false;
+            })
+        }
+    }
+
+    updateAttendee = async ()=>{
+        const user = store.userStore.user;
+        this.loading = true;
+        try{
+            await agent.Activities.attend(this.selectedActivity!.id);
+            runInAction(()=>{
+                if(this.selectedActivity?.isGoing){
+                    this.selectedActivity.attendees = this.selectedActivity.attendees?.filter(z => z.userName !== user?.userName);
+                    this.selectedActivity.isGoing= false;
+                }
+                else{
+                    const attendence = new Profile(user!);
+                    this.selectedActivity?.attendees?.push(attendence);
+                    this.selectedActivity!.isGoing=true;
+                }
+
+                this.activitiesRegistry.set(this.selectedActivity!.id, this.selectedActivity!);
+                })
+
+        }catch(error){
+            toast.error(error);
+        }finally{
+            runInAction(()=>{
+                this.loading=false;
+            })
+        }
+    }
+
+    cancelActivityToggle = async ()=>{
+        this.loading = true;
+        try{
+            await agent.Activities.attend(this.selectedActivity!.id);
+            this.selectedActivity!.isCancelled = !this.selectedActivity?.isCancelled;
+            this.activitiesRegistry.set(this.selectedActivity!.id,this.selectedActivity!);
+            this.loading=false;
+        }catch(error){
+            console.log(error);
+            runInAction(()=>{
+                this.loading=false;
+            })
+        }
+        finally{
+            runInAction(()=>{
+                this.loading=false;
             })
         }
     }

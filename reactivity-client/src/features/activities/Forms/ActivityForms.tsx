@@ -12,22 +12,14 @@ import MyArea from '../../../app/common/Form/MyArea';
 import { selectoptions } from '../../../app/common/Form/options/selectoptions';
 import MySelect from '../../../app/common/Form/MySelect';
 import MyDate from '../../../app/common/Form/MyDate';
-import { Activity } from '../../../app/models/activity';
+import { Activity, ActivityFormValues } from '../../../app/models/activity';
 
 export default observer(function ActivityForms() {
   const {activityStore} = useStore();
   const {selectedActivity,updateActivity,createActivity,loading,loadingActivityDetail,loadingInitial} = activityStore;
   const {id} = useParams();
   const nevigate = useNavigate();
-  const [activity,setActivity] = useState<Activity>({
-    id: '',
-    title: '',
-    date: null,
-    description: '',
-    category: '',
-    city: '',
-    venue: ''
-    });
+  const [activity,setActivity] = useState<ActivityFormValues>(new ActivityFormValues());
 
   const validation = Yup.object({
     title: Yup.string().required('title needed'),
@@ -39,12 +31,12 @@ export default observer(function ActivityForms() {
   })
 
   useEffect(()=>{
-   if(id) loadingActivityDetail(id).then(activity=> setActivity(activity!));
+   if(id) loadingActivityDetail(id).then(activity=> setActivity(new ActivityFormValues(activity)));
   
   },[id,loadingActivityDetail])
  
  
-  function handleFormSubmit(activity:Activity){
+  function handleFormSubmit(activity:ActivityFormValues){
     if(!activity.id){
       activity.id = uuid();
       createActivity(activity).then(()=>nevigate(`/activities/${activity.id}`));
@@ -76,7 +68,7 @@ export default observer(function ActivityForms() {
               <MyInput placeholder="Venue" name="venue" />
               <Button 
                disabled = {isSubmitting || !dirty || !isValid}
-              loading={loading} floated="right" positive type="submit" content="Submit" />
+              loading={isSubmitting} floated="right" positive type="submit" content="Submit" />
               <Button as={Link} to={`/activities/${activity.id}`} floated="right" type="button" content="Cancel"/>
             </Form>
            )}

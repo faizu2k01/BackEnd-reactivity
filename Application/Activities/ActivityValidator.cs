@@ -8,7 +8,7 @@ namespace Application.Activities
     {
         public ActivityValidator()
         {
-            RuleFor(x => x.Id).NotEmpty();
+            
             RuleFor(x => x.Title).NotEmpty();
             RuleFor(x => x.Description).NotEmpty();
             RuleFor(x => x.Venue).NotEmpty();
