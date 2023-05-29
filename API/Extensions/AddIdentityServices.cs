@@ -1,6 +1,7 @@
 ﻿using API.Services;
 using Application.Interfaces;
 using Domain;
+using Infrastructure.Photos;
 using Infrastructure.Security;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -45,6 +46,7 @@ namespace API.Extensions
             services.AddScoped<TokenGenerator>();
             services.AddHttpContextAccessor();
             services.AddScoped<IUserAccess, UserAccess>();
+            services.AddScoped<IPhotoAccessor, PhotoAccessor>();
 
             return services;
         }
