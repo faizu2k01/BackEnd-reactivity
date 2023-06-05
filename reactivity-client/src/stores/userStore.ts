@@ -6,6 +6,7 @@ import { toast } from "react-toastify";
 import { router } from "../app/router/routes";
 import agent from "../api/agent";
 import modalContainer from "../app/common/modals/modalContainer";
+import { ImageGroup } from "semantic-ui-react";
 
 export default class UserStore{
     user:User | null = null;
@@ -82,5 +83,9 @@ export default class UserStore{
             toast.error("not able to send user from userStore");
             router.navigate('/');
         }
+    }
+
+    setImage = (image:string)=>{
+        if(this.user) this.user.image = image;
     }
 }

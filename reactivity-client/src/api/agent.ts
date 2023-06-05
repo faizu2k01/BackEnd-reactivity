@@ -4,7 +4,7 @@ import { toast } from "react-toastify";
 import { router } from "../app/router/routes";
 import { store } from "../stores/store";
 import { User, UserFormValues } from "../app/models/user";
-import { configure } from "mobx";
+import { Photo, Profile } from "../app/models/profile";
 
 
 const sleep = (delay:number)=>{
@@ -84,9 +84,22 @@ const Account ={
     login:(user:UserFormValues)=> requests.post<User>("/account/login",user)
 }
 
+const Profiles ={
+    get:(username:string)=> requests.get<Profile>(`/profiles/${username}`),
+    uplaodPhotos:(file:Blob)=>{
+        let formData = new FormData();
+        formData.append('File',file);
+        return axios.post<Photo>('/Photos',formData,{
+            headers:{'Content-Type':'multipart/form-data'}
+        });
+    },
+    setMainImg:(id:string)=>requests.post(`/photos/${id}/setMain`,{}),
+    deleteImg:(id:string)=>requests.delete(`/photos/${id}`)
+}
 const agent ={
     Activities,
-    Account
+    Account,
+    Profiles
 }
 
 
