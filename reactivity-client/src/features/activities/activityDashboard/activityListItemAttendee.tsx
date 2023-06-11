@@ -10,7 +10,12 @@ interface Props{
     attendee:Profile[];
 }
 export default observer(function ActivityListItemAttendee({attendee}:Props){
-    return (
+  const style={
+    borderColor:'orange',
+    bordorWidth:2
+  }
+  
+  return (
       <List horizontal>
         {attendee.map((at) => {
           return (
@@ -24,6 +29,8 @@ export default observer(function ActivityListItemAttendee({attendee}:Props){
                   key={at.userName}
                 >
                   <Image
+                    style={at.follow?style:null}
+                    bordered
                     circular
                     size="mini"
                     src={at.image || "/assets/user.png"}

@@ -5,7 +5,7 @@ import axios from 'axios';
 import ValidationError from './ValidationError';
 
 export default function ExceptionErrors() {
-    const baseUrl = 'http://localhost:5000/api/'
+    const baseUrl = process.env.REACT_APP_API_URL;
     const [errors,setErrors]=useState(null);
     function handleNotFound() {
         axios.get(baseUrl + 'buggy/not-found').catch(err => console.log(err.response));

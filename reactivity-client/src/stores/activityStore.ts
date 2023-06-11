@@ -1,12 +1,11 @@
-import { makeAutoObservable, makeObservable, runInAction } from "mobx";
+import { makeAutoObservable, makeObservable, reaction, runInAction } from "mobx";
 import { Activity, ActivityFormValues } from "../app/models/activity";
 import agent from "../api/agent";
-import {v4 as uuid} from "uuid";
 import {format} from 'date-fns';
 import { store } from "./store";
-import { transpileModule } from "typescript";
 import { toast } from "react-toastify";
 import { Profile } from "../app/models/profile";
+import { Pagination, PaginationParams } from "../app/models/pagination";
 
 export default class ActivityStore{
     activitiesRegistry = new Map<string,Activity>();
@@ -15,10 +14,24 @@ export default class ActivityStore{
     loading:boolean=false;
     submitting:boolean=false;
     loadingInitial:boolean=false;
+    pagination:Pagination|null=null;
+    paginationParams=new PaginationParams();
+    predicate = new Map().set('all',true);
 
     constructor(){
        makeAutoObservable(this);
+
+       reaction(
+        ()=>this.predicate.keys(),
+        ()=>{
+            this.paginationParams = new PaginationParams();
+            this.activitiesRegistry.clear();
+            this.loadingActivity();
+        }
+       );
     }
+
+
 
     get activitySortedByDate():Array<Activity>{
         return Array.from(this.activitiesRegistry.values()).sort((b,a)=>b.date!.getTime()-a.date!.getTime());
@@ -34,6 +47,61 @@ export default class ActivityStore{
         )
     }
 
+
+
+    setParams=(paginationParams:PaginationParams)=>{
+        this.paginationParams=paginationParams;
+         
+    }
+
+    
+
+    setPredicate=(predicate:string,value:string|Date)=>{
+
+        const resetPredicate =  ()=>{
+            this.predicate.forEach((value,key)=>{
+                if(key !== 'startDate') this.predicate.delete(key);
+            })
+        }
+        switch (predicate)
+        {
+            case 'all':
+                resetPredicate();
+                this.predicate.set('all',true);
+                break;
+            case 'isGoing':
+                resetPredicate();
+                this.predicate.set('isGoing',value);
+                break;
+            case 'isHost':
+                resetPredicate();
+                this.predicate.set('isHost',value);
+                break;
+            case 'startDate':
+                this.predicate.delete('startDate');
+                this.predicate.set('startDate',value);
+
+        
+        }
+    }
+
+
+
+    get axiosParams(){
+        const params =new  URLSearchParams();
+        params.append('pageNumber',this.paginationParams.pageNumber.toString());
+        params.append('pageSize',this.paginationParams.pageSize.toString());
+        this.predicate.forEach((value,key)=>{
+            if(key === 'startDate'){
+                params.append(key, (value as Date).toISOString());
+            }else{
+                params.append(key,value);
+            }
+            
+        })
+        return params;
+    }
+
     //action of the mobx
     loadingActivity = async ()=>{
        this.setLoadingInitial(true);
@@ -42,12 +110,13 @@ export default class ActivityStore{
         return;
        } 
         try{
-            const activities  = await agent.Activities.list();
-             activities.forEach(x => {
+            const result  = await agent.Activities.list(this.axiosParams);
+             result.data.forEach(x => {
              x =  this.setActivityDate(x);    
              this.activitiesRegistry.set(x.id,x);                      
              });
              runInAction(()=>{
+                this.loadPagination(result.pagination);
                 this.setLoadingInitial(false);
              })
         }catch(error){
@@ -57,6 +126,10 @@ export default class ActivityStore{
 
             }) 
         }
+    }
+
+    private loadPagination = (pagination:Pagination)=>{
+        this.pagination = pagination;
     }
 
 
@@ -216,6 +289,18 @@ export default class ActivityStore{
 
     clearSelectedActivity = ()=>{
         this.selectedActivity =undefined;
+    }
+
+
+    updateFollow=(username:string)=>{
+        this.activitiesRegistry.forEach(activity=>{
+            activity.attendees.forEach(attendee=>{
+                if(attendee.userName === username){
+                    attendee.follow?attendee.followerCount--:attendee.followerCount++;
+                    attendee.follow = !attendee.follow;
+                }
+            })
+        })
     }
 }
 

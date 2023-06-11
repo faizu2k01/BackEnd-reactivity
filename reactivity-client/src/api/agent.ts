@@ -5,6 +5,7 @@ import { router } from "../app/router/routes";
 import { store } from "../stores/store";
 import { User, UserFormValues } from "../app/models/user";
 import { Photo, Profile } from "../app/models/profile";
+import { PagedList } from "../app/models/pagination";
 
 
 const sleep = (delay:number)=>{
@@ -19,7 +20,12 @@ axios.interceptors.request.use(configure=>{
     return configure; 
 })
 axios.interceptors.response.use(async resp =>{
-        await sleep(2000);
+       if(process.env.NODE_ENV==='development') await sleep(2000);
+        const pagination = resp.headers['pagination'];
+        if(pagination){
+            resp.data = new PagedList(resp.data,JSON.parse(pagination));
+            return resp as AxiosResponse<PagedList<any>>
+        }
         return resp;
  },(error:AxiosError)=>{
     
@@ -58,7 +64,7 @@ axios.interceptors.response.use(async resp =>{
     return  Promise.reject(error);
  } )
 
-axios.defaults.baseURL = 'http://localhost:5000/api';
+axios.defaults.baseURL = process.env.REACT_APP_API_URL;
 
 const responseBody = <T> (response:AxiosResponse<T>) => response.data;
 
@@ -70,7 +76,7 @@ const requests = {
 }
 
 const Activities ={
-    list:()=> requests.get<Activity[]>('/activities'),
+    list:(params:URLSearchParams)=> axios.get<PagedList<Activity[]>>('/activities',{params}).then(responseBody),
     details:(id:string)=> requests.get<Activity>(`/activities/${id}`),
     create:(activity:ActivityFormValues)=>requests.post<void>('/activities', activity),
     update:(activity:ActivityFormValues)=>requests.put<void>(`/activities/${activity.id}`,activity),
@@ -94,7 +100,9 @@ const Profiles ={
         });
     },
     setMainImg:(id:string)=>requests.post(`/photos/${id}/setMain`,{}),
-    deleteImg:(id:string)=>requests.delete(`/photos/${id}`)
+    deleteImg:(id:string)=>requests.delete(`/photos/${id}`),
+    updateFollow:(username:string)=>requests.post(`/follow/${username}`,{}),
+    list:(username:string,predicate:string)=>requests.get<Profile[]>(`/follow/${username}?predicate=${predicate}`)
 }
 const agent ={
     Activities,

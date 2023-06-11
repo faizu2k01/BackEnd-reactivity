@@ -1,8 +1,8 @@
 import { observer } from 'mobx-react-lite'
 import React from 'react'
-import { Button, Grid, Header, Item, Reveal, Segment, Statistic } from 'semantic-ui-react'
+import {  Grid, Header, Item, Segment, Statistic } from 'semantic-ui-react'
 import { useStore } from '../../stores/store'
-import LoadingComponent from '../../app/layout/LoadingComponent'
+import FollowButton from './FollowButton'
 
 
 export default observer(function ProfileHeader(){
@@ -25,23 +25,10 @@ export default observer(function ProfileHeader(){
                 </Grid.Column>
                 <Grid.Column width={4}>
                         <Statistic.Group widths={2}>
-                            <Statistic label="Followers" value='4'/>
-                            <Statistic label="Following" value='45'/>
+                            <Statistic label="Followers" value={profiles?.followerCount}/>
+                            <Statistic label="Following" value={profiles?.followingCount}/>
                         </Statistic.Group>
-                        <Reveal animated='move'>
-                            <Reveal.Content visible style={{width:'100%'}}>
-                                <Button fluid color='teal' content="Following"/>
-                            </Reveal.Content>
-                            <Reveal.Content hidden style={{width:'100%'}}>
-                                <Button
-                                    basic
-                                    fluid
-                                    color={true?'red':'green'}
-                                    content={true?"Unfollow":"Follow"}
-                                />
-
-                            </Reveal.Content>
-                        </Reveal>
+                       <FollowButton profile={profiles!}/>
                 </Grid.Column>
             </Grid>
         </Segment>
